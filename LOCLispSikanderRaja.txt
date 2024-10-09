@@ -1,0 +1,1866 @@
+   #|************************************************************
+     * Name: Sikander Raja                                      *
+     * Project:  6 LOC Lisp                                     *
+     * Class:  CMPS 366 01                                      *
+     * Date:  3/13/2024                                         *
+     ************************************************************ |#
+
+
+
+#| *********************************************************************
+Function Name: game-menu
+Purpose: Display the main menu of the game and handle the user's selection. Asking for the user to either choose between serialziation or Human vs Computer
+Parameters: None.
+Return Value: None.
+Algorithm: 
+    1) Display the game menu for the user
+    2) Get input from user
+    3) Based on input enter startgame or Serialization
+Reference: None.
+********************************************************************* |#
+
+(defun game-menu()
+  (menu-display)
+
+  (let ((userinput (binary-input-validation)))
+    (cond ((= userinput 0)
+            (startgame))
+          ((= userinput 1)
+          (Serialization)
+          )
+    )
+  )
+)
+
+#| *********************************************************************
+Function Name: menu-display
+Purpose: Text of game menu asking 0.) for human vs computer 1.) serialization
+Parameters: None.
+Return Value: None.
+Algorithm: 
+    1) Print user with option to start the game with
+Reference: None.
+********************************************************************* |#
+
+
+(defun menu-display ()
+  (format t "Please select an option:~%")
+  (format t "0.) Human Vs Computer~%")
+  (format t "1.) Serialization~%")
+)
+
+#| *********************************************************************
+Function Name: binary-input-validation
+Purpose: Validate the user's input ensuring it is either "1" or "0".
+Parameters: None
+Return Value: Validating input either 0 or 1.
+Algorithm: 
+    1) Read line from user
+    2) Check if 1 or 0
+        a) if so return value
+        b) if not print error message
+Reference: None.
+********************************************************************* |#
+
+
+(defun binary-input-validation ()
+  (let ((input (read-line))) ; Reading a line of input as a string
+    (cond ((or (string= input "1") (string= input "0")) ; Checking if input is "1" or "0"
+           (parse-integer input)) ; If so, return the integer
+          (t (print "Enter 1 or 0 only") ; Otherwise, print an error message
+             (binary-input-validation))))
+) ; And call the function recursively for another try
+
+#| *********************************************************************
+Function Name: startgame
+Purpose: Initiate the game from initial-game-state, giving both players the default board and zero score. It also initializes players through cointoss.
+Parameters: None.
+Return Value: None.
+Algorithm: 
+    1) Initialize the game state and players' order with a coin toss.
+    3) Proceed to moving-piece with the initialized game state and player order.
+Reference: None.
+********************************************************************* |#
+
+
+(defun startgame()
+  (print "STARTING GAME")
+
+  (let ((gamestate (initialize-game-state)) (playerlist (cointoss)))
+
+   (printboard (first gamestate))
+   (moving-piece playerlist gamestate 'nocoin)
+
+  )
+
+)
+
+#| *********************************************************************
+Function Name: initialize-game-state
+Purpose: Initialize the default gameboard and score for a newly started game. 
+Parameters: None.
+Return Value: A list that contains a list of the default board and 4 other elements reflecting the score and wins of the player
+Algorithm: 
+    1) Construct a nested list representing A board. 
+    2) Add initial scores and win counts for both players.
+Reference: None.
+********************************************************************* |#
+
+
+(defun initialize-game-state ()
+  ;; Starting board
+  (list
+    ;; Board
+    (list (list 'x 'B 'B 'B 'B 'B 'B 'x)
+          (list 'W 'x 'x 'x 'x 'x 'x 'W)
+          (list 'W 'x 'x 'x 'x 'x 'x 'W)
+          (list 'W 'x 'x 'x 'x 'x 'x 'W)
+          (list 'W 'x 'x 'x 'x 'x 'x 'W)
+          (list 'W 'x 'x 'x 'x 'x 'x 'W)
+          (list 'W 'x 'x 'x 'x 'x 'x 'W)
+          (list 'x 'B 'B 'B 'B 'B 'B 'x))
+  
+   ; Human: Wins and score
+   0 0 
+
+   ; Computer Wins and Score
+   0 0
+
+  )
+)
+
+
+#| *********************************************************************
+Function Name: cointoss
+Purpose: Simualate a coin toss for the user to see wether or not theyll be the first player.
+Parameters: None.
+Return Value: A list of the player's order and color was assigned depending on whether the user was correct.
+Algorithm: 
+    1) Ask user to guess between heads or tails
+    2) Generate a number to simulate the coin toss
+    3) Print the result of the coin toss
+    4) Compare the coin toss outcome to user's intput:
+       - If correct, user starts as the black player.
+       - If incorrect, computer starts as the black player.
+    5) Return list indicating the starting player and their colors.
+Reference: https://www.cs.cmu.edu/Groups/AI/html/cltl/clm/node133.html
+********************************************************************* |#
+
+(defun cointoss ()
+  (print "Choose tails (1) or heads (0) to decide for first player ")
+  (let ((coinlanded (random 2))
+        (userinput (binary-input-validation)))
+    (cond ((= coinlanded 1) 
+           (print "tails"))
+          ((= coinlanded 0) 
+           (print "heads")))
+    (cond ((= coinlanded userinput)
+           (format t "Correct guess, you're the starting player color black.~%")
+           '((Human B) (Computer W))) ; Correct guess
+          (t
+           (format t "Incorrect guess, starting player computer color black.~%")
+           '((Computer B) (Human W))))) ; Incorrect guess, fixed Player to Human
+)
+
+#| *********************************************************************
+Function Name: moving-piece
+Purpose: Helper function to round-play. Allows the pieces to move and update the board properly.
+Parameters:
+            playerlist, a list indicating the current and next player.
+            gamestate, a representation of the current state of the game.
+            cointoss, a flag used to determine if cointoss will need to be used again.
+Return Value: None.
+Algorithm: 
+    1) Display current player and clear any previous output.
+    2) Show all possible moves for current player.
+    3) Depending on whether the current player is human or computer:
+       a) Ask the player to input a move and check it against the list of possible moves.
+       c) Add the verified move to the game board.
+    4) Announce the completion of the turn and call `swap-player`. Transitioning to the next player, providing the updated game state.
+Reference: None.
+********************************************************************* |#
+
+(defun moving-piece (playerlist gamestate cointoss)
+
+;;Display current player
+(format t "Current player: ~A~%" (first playerlist))
+(clear-output)
+
+
+;;Display all possible moves of the player.
+(displayallpossiblemoves (first gamestate) (first (rest (first playerlist))))
+;;Human player is going
+  (cond 
+    ((eq (first (first playerlist)) 'Human)
+        
+        ;;Validate that my user and entered in a proper input
+        ;;Check that the piece is the players piece
+        
+          ;;Check to see if position wanting to move is doable
+          (let ((board (first gamestate))  
+                ;;Validate and get current piece
+                (currentPiece (user-input (first gamestate) (first(rest(first playerlist)))))
+                (currentColor (first (rest (first playerlist)))) )
+
+              ;;position to move
+              (Print "Location to move: ")
+                ;;Validate position to move
+                (let ((newPosition (validate-move (getallmovesforposition board currentcolor currentpiece) (read-line) 
+                        (length (getallmovesforposition board currentcolor currentpiece)) 
+                        (length (getallmovesforposition board currentcolor currentpiece)) 
+                        (getallmovesforposition board currentcolor currentpiece) )))
+                
+                        ;;Player has ended turn and updated the board with new movement.
+                          (format t "Turn finished~%")
+                          (swap-player playerlist (replace-board gamestate 
+                          (updateboard board currentpiece newposition currentcolor)) cointoss)
+                  
+
+                )
+
+          )
+        
+        )
+
+
+    ;;Computer player is going
+    ((eq (first (first playerlist)) 'Computer)
+
+        ;;Validate that my user and entered in a proper input
+        ;;Check that the piece is the players piece
+        
+          ;;Check to see if position wanting to move is doable
+          (let ((board (first gamestate)) 
+                (currentPiece (user-input (first gamestate) (first(rest(first playerlist)))))
+                (currentColor (first (rest (first playerlist)))) )
+
+
+              ;;position to move
+              (Print "Location to move: ")
+              ;;Validate position to move
+                (let ((newPosition (validate-move (getallmovesforposition board currentcolor currentpiece) (read-line) 
+                        (length (getallmovesforposition board currentcolor currentpiece)) 
+                        (length (getallmovesforposition board currentcolor currentpiece)) 
+                        (getallmovesforposition board currentcolor currentpiece) )))
+
+                          ;;Player has ended turn and updated the board with new movement.
+                          (format t "Turn finished~%")
+                          (swap-player playerlist (replace-board gamestate 
+                          (updateboard board currentpiece newposition currentcolor)) cointoss)
+
+                )
+
+          )
+        
+      )
+
+  )
+
+)
+
+#| *********************************************************************
+Function Name: displayallpossiblemoves
+Purpose: show the user all possible moves a player could make from the pieces on the currentboard
+Parameters:
+            Board: list structure representing the current state of the game board. It is passed by value, and its purpose is to provide the current layout of pieces on the board.
+            Currentcolor, a symbol ('B' or 'W') indicating the current player's color, is used to know which piece can be moved.
+Return Value: None.
+Algorithm: 
+    1) Utilize the find-all-positions function to retrieve a list of all pieces on the board that match the current player's color.
+    2) Call the displaycurrentpiecemove function. This function is responsible for the actual display of the possible moves for each piece.
+Reference: None.
+********************************************************************* |#
+
+(defun displayallpossiblemoves (board currentcolor)
+  (let ((listofallpieces (find-all-positions board currentcolor 1 ())))
+    (let ((amountofpieces (length listofallpieces)))
+
+      (displaycurrentpiecemove board currentcolor listofallpieces amountofpieces)
+
+    )
+  )
+)
+
+#| *********************************************************************
+Function Name: find-all-positions
+Purpose: Helper function to displayallpossiblemoves. Looks through every row on the game board to obtain a list of every place that pieces of that particular color have taken up.
+Parameters:
+            Board: list structure representing the current state of the game board. It is used to inspect the layout of pieces.
+            currentcolor, a symbol ('B' or 'W') designating the color of the player whose pieces are to be located.
+            increment, a number that keeps track of the row that is currently being examined. It functions as the iteration variable for the recursive function.
+            allpositionlists, a list accumulating the positions of pieces found to match the currentcolor.
+Return Value: A list of all positions (coordinates) on the board where pieces of the currentcolor are located. This list is built recursively and returned once the function has inspected all rows of the board.
+Algorithm: 
+    1) Verify whether the increment has grown more significant than the board. Return the compiled list of positions if that is the case.
+    2) If not, use the increment value to retrieve the current row from the board.
+    3) To locate fragments of the current color in the recovered row, utilize the searchrow function.
+    4) Add the discovered positions to allpositionlists.
+    5) Until every row has been processed, run find-all-positions recursively using the following row (increment + 1).
+Reference: None.
+********************************************************************* |#
+
+(defun find-all-positions (board currentcolor increment allpositionlists)
+  (cond 
+    ((> increment 8) allpositionlists) ; When increment equals 8, stop the recursion and return NIL
+    (t ; Otherwise, continue with the recursion
+     (find-all-positions board currentcolor (+ increment 1) 
+                            (append allpositionlists
+                                  (searchrow (getrow increment board) currentcolor 1 increment board '()))); Continue to the next increment
+    )
+  )
+)
+
+#| *********************************************************************
+Function Name: searchrow
+Purpose: Helper function to find-all-positions. Searching the row to find if a certain the same color exist in the row and appends on if so.
+Parameters:
+            examinlst, a list representing of the current row from the board.
+            currentcolor, a symbol ('B' or 'W') designating the color of the player whose pieces are to be located.
+            selfincrement, an integer that keeps track of the row's current inspected column.
+            rowincrement, an integer indicating the current row number.
+            board, the entire game board represented as a nested list. This parameter is not used in the function's logic.
+            accumulated, a list that gets all the possible positions to move.
+Return Value: a list of locations for the pieces of the designated color in the row under examination. When a match is found, each location is added to the cumulative list.
+Algorithm: 
+    1) Verify that the self-increment has not gone above the row's limit, which is eight for an 8x8 board. Return the accrued positions if that is the case.
+    2) Add the board coordinates of the current cell, which is the first item in the examinlst, to the accumulated list if it matches the current color.
+    3) Until every cell in the row has been inspected, recursively execute searchrow on the remaining rows with updated selfincrement.
+Reference: None.
+********************************************************************* |#
+
+(defun searchrow (examinlst currentcolor selfincrement rowincrement board accumulated)
+  (cond 
+    ((> selfincrement 8) accumulated) ; Stop the recursion when selfincrement is greater than 8
+    ((eq currentcolor (first examinlst))
+     (searchrow (rest examinlst) currentcolor (+ selfincrement 1) rowincrement board
+                (append accumulated
+                        (list (reverse-convert (write-to-string (+ (* selfincrement 10) rowincrement)))))))
+    (t (searchrow (rest examinlst) currentcolor (+ selfincrement 1) rowincrement board accumulated)))
+)
+
+#| *********************************************************************
+Function Name: displaycurrentpiecemove
+Purpose: iterate through the list of current pieces and display all possible moves for each piece.Purpose is for player's strategic planning by clearly presenting viable move options for their pieces on the game board.
+Parameters:
+            Board is a list of levels that shows the state of the game board at that moment. information required to ascertain each piece's potential moves.
+            currentcolor, a symbol ('B' or 'W') designating the color of the player whose pieces are to be located.
+            currentpiece, a list of positions where a current piece is at.
+            increment, an integer value is decremented with each recursive call until all pieces have been handled.
+Return Value: None.
+Algorithm: 
+    1) Verify that the increment is zero, which means that every piece has been handled, and end the recursion.
+    2) currentpiece is called to getallmovesforposition, returning back all potential moves.
+    3) Show the position of the component as it is now and any potential movements.
+    4) Call displaycurrentpiecemove recursively with the remaining pieces in the currentpiece list, decreasing the increment as you go until every piece is handled.
+Reference: None.
+********************************************************************* |#
+
+(defun displaycurrentpiecemove(board currentcolor currentpiece increment)
+
+  (let ((firstpiece (first currentpiece)))
+  
+    (cond ((= increment 0) NIL)
+          (t 
+              
+              (let ((listofallmoves (getallmovesforposition board currentcolor firstpiece)))
+
+                (format t "Piece: ~A, Moves = ~A~%" firstpiece listofallmoves)
+
+              )
+
+          (displaycurrentpiecemove board currentcolor (rest currentpiece) (- increment 1))
+          )
+    )
+
+  )
+)
+
+#| *********************************************************************
+Function Name: getallmovesforposition
+Purpose: Find all possible moves for a specific piece on the board.
+Parameters:
+            Board, is a nested list representing the game board's current state.
+            currentcolor, a symbol indicating the color of the piece ('B' or 'W') to determine certian move retrictions
+            currentpiece, list indicating the position of the piece on the board for which moves are being vertified.
+Return Value: A list of all feasible moves (left diagonal, right diagonal, vertical, and horizontal) for the given piece.
+Algorithm: 
+    1) To find potential movements in each direction for the supplied piece, call left diagonal-check, right diagonal-check, vertical-check, and horizontal-check.
+    2) Compile the outcomes of these tests into a single list to show every move the piece could make.
+Reference: None.
+********************************************************************* |#
+
+(defun getallmovesforposition (board currentcolor currentpiece)
+  (let ((listofpieces '()))
+
+    (let ((leftdiagonal (leftdiagonal-check board currentColor currentpiece))
+          (rightdiagonal (rightdiagonal-check board currentColor currentpiece))
+          (vertical (vertical-check board currentColor currentpiece))
+          (horizontal (horizontal-check board currentColor currentpiece)))
+
+      (append listofpieces leftdiagonal rightdiagonal vertical horizontal)
+
+    )
+  )
+)
+
+#| *********************************************************************
+Function Name: leftdiagonal-check
+Purpose: Evaluate potential moves along the left diagonal from the current piece's position on the board.
+Parameters:
+            Board, is a nested list representing the game board's current state.
+            playercolor, a symbol indicating the color of the piece ('B' or 'W') to determine certian move retrictions
+            currentpiece, list indicating the position of the piece on the board for which moves are being vertified.
+Return Value: A list of strings representing the potential coordinates a piece can move.
+Algorithm: 
+    1) Using the position of the present piece as a guide, determine the starting and piece positions for left diagonal movement.
+    2) Create lists that show the diagonal lines from the current component that extend to the top-left and bottom-right.
+    3) Determine the number of places open for movement, taking into account the board's limitations and the arrangement of the pieces.
+    4) Use the check-for-block tool to assess possible motions in both directions by considering impediments and legal moves.
+    5) Convert internal board coordinates back to the standard notation for display or additional processing and return a list of legitimate move positions based on evaluations in both diagonal directions.
+Reference: None.
+********************************************************************* |#
+
+(defun leftdiagonal-check (board playercolor currentpiece)
+  (let* ((startingposition (first (startleftposition (convert-input currentpiece) 1))) 
+         (pieceposition (first (rest (startleftposition (convert-input currentpiece) 1))))
+         (selectedrow (getleftdiagonallist startingposition board ()))
+         (topleftrow (subseq selectedrow pieceposition))
+         (bottomrightrow (rest (subseq (reverse-list selectedrow) (- (length selectedrow) pieceposition))))
+         (availablespaces (totalspaces selectedrow 0 8))
+         (topresult (when (and topleftrow (>= (length topleftrow) availablespaces))
+                      (check-for-block topleftrow currentpiece playercolor availablespaces availablespaces)))
+         (bottomresult (when (and bottomrightrow (>= (length bottomrightrow) availablespaces))
+                         (check-for-block bottomrightrow currentpiece playercolor availablespaces availablespaces))))
+    (cond
+     ((and (eq topresult 'valid) (eq bottomresult 'valid))
+      (append
+       (list (reverse-convert (write-to-string (+ (* (+ (first (convert-input currentpiece)) availablespaces) 10)
+                                                  (+ (first (rest (convert-input currentpiece))) availablespaces)))))
+       (list (reverse-convert (write-to-string (+ (* (- (first (convert-input currentpiece)) availablespaces) 10)
+                                                  (- (first (rest (convert-input currentpiece))) availablespaces)))))))
+     ((eq topresult 'valid)
+      (list (reverse-convert (write-to-string (+ (* (+ (first (convert-input currentpiece)) availablespaces) 10)
+                                                  (+ (first (rest (convert-input currentpiece))) availablespaces))))))
+     ((eq bottomresult 'valid)
+      (list (reverse-convert (write-to-string (+ (* (- (first (convert-input currentpiece)) availablespaces) 10)
+                                                  (- (first (rest (convert-input currentpiece))) availablespaces)))))))
+  )
+)
+
+#| *********************************************************************
+Function Name: startleftposition
+Purpose: finding the starting position for the left diagonal list.
+Parameters:
+            currentpiece, used as the starting point to where the function would find the leftmost most part of the board.
+            position, the distance from the piece's starting position to the uppermost-left position being calculated.
+Return Value: A list containing two elements: the first is a list with the column and row leftmost position and the total spaces the piece was away from the leftmost piece.
+Algorithm: 
+    1) Verify that the current piece is positioned in the board's first row or column. If yes, you are currently in the uppermost-left position, which is feasible.
+    2) If not, move diagonally up and left on the board using the method repeatedly with the position incremented by one and the column and row each decremented by 1.
+    3) When the piece reaches the board's edge, return the final calculated position, reflecting the left diagonal's farthest starting position from the piece's present location.
+Reference: None.
+********************************************************************* |#
+
+(defun startleftposition (currentpiece position)
+
+  (let ((column (first currentpiece))
+        (row (first (rest currentpiece))))
+
+    ;;(format t "searching: ~A~A~%" column row)
+    (cond ((or (= column 1) (= row 1))
+           (list (list column row) position))
+           (t (startleftposition (list (- column 1) (- row 1)) (+ position 1)))
+    )
+  
+  )
+
+)
+
+#| *********************************************************************
+Function Name: getleftdiagonallist
+Purpose: Get the list of diagonal pieces, returning back the actual values from the board to compare.
+Parameters:
+            currentpiece, a list containing two integers that represent the starting column and row from which to begin collecting diagonal pieces.
+            Board, is a nested list representing the game board's current state. Used in order to access the pieces located at specific coordinates.
+            returnlst, a list that accumulates the pieces found along the left diagonal.
+Return Value: a list of the diagonal line pieces starting from the leftmost position.
+Algorithm: 
+    1) Verify that the current location (row or column) is at the board's edge (for an 8x8 board, this equals 8). If so, return the list and append the piece at this point to returnlst.
+    2) If the item is not near the edge, retrieve it at this location and append it to returnlist.
+    3) Until the board's edge is reached, recursively call getleftdiagonallist with the modified returnlist and the subsequent diagonal position (row and column both increased by 1).
+Reference: None.
+********************************************************************* |#
+
+(defun getleftdiagonallist (currentpiece board returnlst)
+
+
+  (let ((column (first currentpiece))
+        (row (first (rest currentPiece))))
+
+          ;;(print currentpiece)
+          ;;(print column)
+          ;;(print row)
+          ;;(print (getpiece column (getrow row board)) )
+
+        (cond
+          ((or (= column 8) (= row 8))
+          (append returnlst (list (getpiece column (getrow row board))) )) ; Assuming returnlst is something you want to return or do
+          (t
+           (getleftdiagonallist (list (+ column 1)(+ row 1)) board  (append returnlst (list (getpiece column (getrow row board))) ))))
+    
+
+  )
+)
+
+#| *********************************************************************
+Function Name: rightdiagonal-check
+Purpose: Evaluate potential moves along the right diagonal from the current piece's position on the board.
+Parameters:
+            Board, is a nested list representing the game board's current state.
+            playercolor, a symbol indicating the color of the piece ('B' or 'W') to determine certian move retrictions
+            currentpiece, list indicating the position of the piece on the board for which moves are being vertified.
+Return Value: A list of strings representing the potential coordinates a piece can move.
+Algorithm: 
+    1) Using the position of the present piece as a guide, determine the starting and piece positions for right diagonal movement.
+    2) Create lists that show the diagonal lines from the current component that extend to the toprigh and bottomleft.
+    3) Determine the number of places open for movement, taking into account the board's limitations and the arrangement of the pieces.
+    4) Use the check-for-block tool to assess possible motions in both directions by considering impediments and legal moves.
+    5) Convert internal board coordinates back to the standard notation for display or additional processing and return a list of legitimate move positions based on evaluations in both diagonal directions.
+Reference: None.
+********************************************************************* |#
+
+(defun rightdiagonal-check (board playercolor currentpiece)
+
+  (let* ((startingposition (first (startrightposition (convert-input currentpiece) 1))) 
+         (pieceposition (first (rest (startrightposition (convert-input currentpiece) 1))))
+         (selectedrow (getrightdiagonallist startingposition board ()))
+         (toprightrow (subseq selectedrow pieceposition)) 
+         (bottomleftrow (rest (subseq (reverse-list selectedrow) (- (length selectedrow) pieceposition))))
+         (availablespaces (totalspaces selectedrow 0 8))
+         (topresult (when (and toprightrow (>= (length toprightrow) availablespaces))
+                      (check-for-block toprightrow currentpiece playercolor availablespaces availablespaces)))
+         (bottomresult (when (and bottomleftrow (>= (length bottomleftrow) availablespaces))
+                         (check-for-block bottomleftrow currentpiece playercolor availablespaces availablespaces))))
+    (cond
+     ((and (eq topresult 'valid) (eq bottomresult 'valid))
+      (append
+       (list (reverse-convert (write-to-string (+ (* (+ (first (convert-input currentpiece)) availablespaces) 10)
+                                                  (- (first (rest (convert-input currentpiece))) availablespaces)))))
+       (list (reverse-convert (write-to-string (+ (* (- (first (convert-input currentpiece)) availablespaces) 10)
+                                                  (+ (first (rest (convert-input currentpiece))) availablespaces)))))))
+     ((eq topresult 'valid)
+      (list (reverse-convert (write-to-string (+ (* (+ (first (convert-input currentpiece)) availablespaces) 10)
+                                                  (- (first (rest (convert-input currentpiece))) availablespaces))))))
+     ((eq bottomresult 'valid)
+      (list (reverse-convert (write-to-string (+ (* (- (first (convert-input currentpiece)) availablespaces) 10)
+                                                  (+ (first (rest (convert-input currentpiece))) availablespaces)))))))
+  )
+)
+
+#| *********************************************************************
+Function Name: startrightposition
+Purpose: finding the starting position for the right diagonal list.
+Parameters:
+            currentpiece, used as the starting point to where the function would find the rightmost most part of the board.
+            position, the distance from the piece's starting position to the uppermost-right position being calculated.
+Return Value: A list containing two elements: the first is a list with the column and row rightmost position and the total spaces the piece was away from the rightmost piece.
+Algorithm: 
+    1) Verify that the current piece is positioned in the board's first row or column. If yes, you are currently in the uppermost-right position, which is feasible.
+    2) If not, move diagonally up and right on the board using the method repeatedly with the position incremented by one and the column and row each decremented by 1.
+    3) When the piece reaches the board's edge, return the final calculated position, reflecting the right diagonal's farthest starting position from the piece's present location.
+Reference: None.
+********************************************************************* |#
+
+(defun startrightposition (currentpiece position)
+
+
+  (let ((column (first currentpiece))
+        (row (first (rest currentpiece))))
+
+    ;;(format t "searching: ~A~A~%" column row)
+    (cond ((or (= column 1) (= row 8))
+           (list (list column row) position))
+           (t (startrightposition (list (- column 1) (+ row 1)) (+ position 1)))
+    )
+  
+  )
+
+)
+
+#| *********************************************************************
+Function Name: getrightdiagonallist
+Purpose: Get the list of diagonal pieces, returning back the actual values from the board to compare.
+Parameters:
+            currentpiece, a list containing two integers that represent the starting column and row from which to begin collecting diagonal pieces.
+            Board, is a nested list representing the game board's current state. Used in order to access the pieces located at specific coordinates.
+            returnlst, a list that accumulates the pieces found along the right diagonal.
+Return Value: a list of the diagonal line pieces starting from the rightmost position.
+Algorithm: 
+    1) Verify that the current location (row or column) is at the board's edge (for an 8x8 board, this equals 8). If so, return the list and append the piece at this point to returnlst.
+    2) If the item is not near the edge, retrieve it at this location and append it to returnlist.
+    3) Until the board's edge is reached, recursively call getrightdiagonallist with the modified returnlist and the subsequent diagonal position (row and column both increased by 1).
+Reference: None.
+********************************************************************* |#
+
+(defun getrightdiagonallist (currentpiece board returnlst)
+
+
+  (let ((column (first currentpiece))
+        (row (first (rest currentPiece))))
+
+          ;;(print currentpiece)
+          ;;(print column)
+          ;;(print row)
+          ;;(print (getpiece column (getrow row board)) )
+
+        (cond
+          ((or (= column 8) (= row 1))
+          (append returnlst (list (getpiece column (getrow row board))) )) ; Assuming returnlst is something you want to return or do
+          (t
+           (getrightdiagonallist (list (+ column 1)(- row 1)) board  (append returnlst (list (getpiece column (getrow row board))) ))))
+    
+
+  )
+)
+
+#| *********************************************************************
+Function Name: vertical-check
+Purpose: Evaluate potential moves along the vertical line from the current piece's position on the board.
+Parameters:
+            Board, is a nested list representing the game board's current state.
+            playercolor, a symbol indicating the color of the piece ('B' or 'W') to determine certian move retrictions
+            currentpiece, list indicating the position of the piece on the board for which moves are being vertified.
+Return Value: A list of strings representing valid board coordinates for potential vertical moves.
+Algorithm: 
+    1) Using getcolumn, extract the column from the location of the current piece and collect every piece in this column.
+    2) Depending on the piece's position, divide the column into two lists
+    3) Determine how many places in the column are open for movement.
+    4) Use check-for-block to analyze each block's direction. This technique determines if a move is feasible based on the number of available spaces and the existence of other pieces.
+    5) translating internal board coordinates back to standard notation for display or additional processing, return a list of move positions that are valid based on the assessments.
+Reference: None.
+********************************************************************* |#
+
+(defun vertical-check (board playercolor currentpiece)
+  (let* ((selectedrow (getcolumn currentpiece board 8 () ))
+         (upwardslist (subseq selectedrow (parse-integer (subseq currentpiece 1))))
+         (downwardslist (subseq (reverse-list selectedrow) (first(rest(convert-input currentpiece)))))
+         (availablespaces (totalspaces selectedrow 0 8)) 
+         (topresult (when (and upwardslist (>= (length upwardslist) availablespaces))
+                      (check-for-block upwardslist currentpiece playercolor availablespaces availablespaces)))
+         (bottomresult (when (and downwardslist (>= (length downwardslist) availablespaces))
+                         (check-for-block downwardslist currentpiece playercolor availablespaces availablespaces))))
+    (cond
+     ((and (eq topresult 'valid) (eq bottomresult 'valid))
+      (append
+       (list (reverse-convert (write-to-string (+ (* (first (convert-input currentpiece)) 10)
+                                                  (- (first (rest (convert-input currentpiece))) availablespaces)))))
+       (list (reverse-convert (write-to-string (+ (* (first (convert-input currentpiece)) 10)
+                                                  (+ (first (rest (convert-input currentpiece))) availablespaces)))))))
+     ((eq topresult 'valid)
+      (list (reverse-convert (write-to-string (+ (* (first (convert-input currentpiece)) 10)
+                                                  (- (first (rest (convert-input currentpiece))) availablespaces))))))
+     ((eq bottomresult 'valid)
+      (list (reverse-convert (write-to-string (+ (* (first (convert-input currentpiece)) 10)
+                                                  (+ (first (rest (convert-input currentpiece))) availablespaces)))))))
+  )
+)
+
+#| *********************************************************************
+Function Name: convert-input
+Purpose: Translate the standard notation for LOC boards (such as "A3") into two indices that can be used for internal board representation.
+Parameters:
+            initialinput, a string representing standard notation, the letter denotes the column (A-H) and the number denotes the row (1-8).
+Return Value: A list containing two elements: for the board internal board to recongize.
+Algorithm: 
+    1) Take the input string and extract the row number and column letter.
+    2) Determine how different the column letter's character code is from 'A''s, then add one to convert the letter to its matching numeric index.
+    3) Subtract the row number from nine to convert the row number from standard notation to the internal representation.
+    4) Provide a list containing the pair of indices that represents the input position's internal coordinates.
+Reference: None.
+********************************************************************* |#
+
+(defun convert-input (initialinput)
+  ;; Assuming initialinput is a string like "A3", where "A"=Column, "3"=Row
+  (let ((column (char initialinput 0))  ;; Get the first character (column letter)
+        (row (parse-integer (subseq initialinput 1)))) ;; Get the rest (row number) and convert to integer
+    ;; Keep the column conversion as it is
+    (let ((column-index (+ (- (char-code column) (char-code #\A)) 1))
+          ;; Reverse the row numbering: 8 becomes 1, 7 becomes 2, ..., 1 becomes 8
+          (row-index (- 9 row)))
+      (list column-index row-index)))
+)
+
+#| *********************************************************************
+Function Name: reverse-convert
+Purpose: Transform internal board representation indices back into standard LOC board notation
+Parameters:
+            input, an integer where the first digit represents the column and the second digit represents the row in reversed order.
+Return Value: A string representing the board position in human LOC notation, with the column denoted by a letter and the row by a number.
+Algorithm: 
+    1) Convert the input integer to a string.
+    2) Parse the column and row from input-str.
+    3) Convert the column back by indexing into a string of letters "ABCDEFGH" based on the index.
+    4) Reverse the conversion of the row to match LOC notation by subtracting 9 and converting it back to a string.
+    5) Concatenate the converted column and row into a single string.
+Reference: None.
+********************************************************************* |#
+
+(defun reverse-convert (input)
+  ;; Ensure input is treated as a string
+  (let* ((input-str (format nil "~D" input)) ;; Convert numeric input to string if necessary
+         (column-index (parse-integer (subseq input-str 0 1)))
+         (row-index (parse-integer (subseq input-str 1 2)))
+         ;; Convert column index to letter using aref on a string of characters
+         (column-char (aref "ABCDEFGH" (- column-index 1)))
+         ;; Calculate the original row number
+         (row-num (format nil "~D" (- 9 row-index))))
+    ;; Return the formatted string without printing it
+    (concatenate 'string (string column-char) row-num)
+  )
+)
+
+#| *********************************************************************
+Function Name: getcolumn
+Purpose: helper function to get vertical movement list.
+Parameters:
+            currentpiece, a string representing the board coordinates.
+            board, a nested list of the current state of the game board. Providing the context for extracting column information.
+            increment, an integer representing the starting row for the column.
+            returnlst, a list has all that appends all of the pieces in that column
+Return Value: A list containing all pieces found in the column.
+Algorithm: 
+    1) Check to see if increment is equal equal to or less than 0 meaning that the column has reached its limit.
+    2) Retrieve the current row from the board based on the increment value.
+    3) Get the piece from the target column.
+    4) Append the extracted piece to returnlst.
+    5) Recursively call `getcolumn` with the updated increment and the updated returnlst.
+Reference: None.
+********************************************************************* |#
+
+(defun getcolumn (currentpiece board increment returnlst)
+  (cond
+    ;; Base case: If increment is 0 or less, return the accumulated list
+    ((<= increment 0) returnlst)
+    ;; Recursive case: Process the next element and recurse
+    (t (let* ((currentrow (getrow increment board)) 
+              (piece (getpiece (first (convert-input currentpiece)) 
+              currentrow)))
+
+            (getcolumn currentpiece board (- increment 1) (append returnlst (list piece)))))
+  )
+)
+
+#| *********************************************************************
+Function Name: getpiece
+Purpose: Retrieve the contains of the cell from the current board
+Parameters:
+            column, an integer representing the target column.
+            row, a list representing a row on the game board.
+Return Value: the that was found from the row and column. ('x, 'W,'B)
+Algorithm: 
+    1) If the column is 1, return the first element of the row list.
+    2) If the target column number is greater than 1, recursively call `getpiece` and decrement column by one and the row list.
+    3) Recursive process until the target column is reached, returning the piece found at that column.
+Reference: None.
+********************************************************************* |#
+
+(defun getpiece (column row)
+
+  (cond ((= column 1)
+        (first row))
+
+        (t (getpiece (- column 1)(rest row)))
+  
+  )
+
+)
+
+#| *********************************************************************
+Function Name: getpiece
+Purpose: Retrieve the contains of the cell from the current board
+Parameters:
+            inputrow, an integer representing the target row.
+            board, a nested list representing board.
+Return Value: found the row of the user.
+Algorithm: 
+    1) If the row is 1, return the first list of the board.
+    2) If the target row number is greater than one, recursively call `getrow` and decrement board by one and the board list.
+    3) Recursive process until the target row is reached, returning the row the inputrow wanted.
+Reference: None.
+********************************************************************* |#
+
+(defun getrow (inputrow board)
+
+  (cond ((= inputrow 1)
+        (first board))
+
+        (t (getrow (- inputrow 1)(rest board)))
+  
+  )
+)
+
+#| *********************************************************************
+Function Name: horizontal-check
+Purpose: Evaluate potential moves along the horizontal line from the current piece's position on the board.
+Parameters:
+            Board, is a nested list representing the game board's current state.
+            playercolor, a symbol indicating the color of the piece ('B' or 'W') to determine certian move retrictions
+            currentpiece, list indicating the position of the piece on the board for which moves are being vertified.
+Return Value: A list of strings representing valid board coordinates for potential horizontal moves.
+Algorithm: 
+    1) Using getrow, extract the row from the location of the current piece.
+    2) Depending on the piece's position, divide the row into two lists
+    3) Determine how many places in the Row are open for movement.
+    4) Use check-for-block to analyze each block's direction. This technique determines if a move is feasible based on the number of available spaces and the existence of other pieces.
+    5) translating internal board coordinates back to standard notation for display or additional processing, return a list of move positions that are valid based on the assessments.
+Reference: None.
+********************************************************************* |#
+
+(defun horizontal-check (board playercolor currentpiece)
+  (let* ((selectedrow (getrow (first (rest (convert-input currentPiece))) board))
+         (rightsidelist (subseq selectedrow (first (convert-input currentpiece))))
+         (leftsidelist (subseq (reverse-list selectedrow) (- 9 (first (convert-input currentpiece)))))
+         (availablespaces (totalspaces selectedrow 0 8)) 
+         (topresult (when (and rightsidelist (>= (length rightsidelist) availablespaces))
+                      (check-for-block rightsidelist currentpiece playercolor availablespaces availablespaces)))
+         (bottomresult (when (and leftsidelist (>= (length leftsidelist) availablespaces))
+                         (check-for-block leftsidelist currentpiece playercolor availablespaces availablespaces))))
+    (cond
+     ((and (eq topresult 'valid) (eq bottomresult 'valid))
+      (append
+       (list (reverse-convert (write-to-string (+ (* (+ (first (convert-input currentpiece)) availablespaces) 10) 
+             (first (rest (convert-input currentpiece)))))))
+       (list (reverse-convert (write-to-string (+ (* (- (first (convert-input currentpiece)) availablespaces) 10) 
+             (first (rest (convert-input currentpiece)))))))))
+     ((eq topresult 'valid)
+      (list (reverse-convert (write-to-string (+ (* (+ (first (convert-input currentpiece)) availablespaces) 10) 
+             (first (rest (convert-input currentpiece))))))))
+     ((eq bottomresult 'valid)
+      (list (reverse-convert (write-to-string (+ (* (- (first (convert-input currentpiece)) availablespaces) 10) 
+             (first (rest (convert-input currentpiece)))))))))
+  )
+)
+
+#| *********************************************************************
+Function Name: reverse-list
+Purpose: To reverse the order of elements in a given list. helper for movement check.
+Parameters:
+            lst, a list to be reversed.
+Return Value: A new list containing all elements in reverse order.
+Algorithm: 
+    1) Check if the input list is empty (null).
+    2) If not empty, recursively call `reverse-list` on the rest of the list reversing the order of the remaining elements.
+    3) Append the first element of the current invocation to the result of the recursive call. This places each element at the end of the list being constructed, effectively reversing the list order.
+Reference: None.
+********************************************************************* |#
+
+(defun reverse-list (lst)
+  (cond ((null lst) nil)  ; If the list is empty, return an empty list
+        (t (append (reverse-list (cdr lst)) (list (car lst)))) ; Otherwise, reverse the rest of the list and append the first element at the end
+  )
+)
+
+#| *********************************************************************
+Function Name: totalspaces
+Purpose: Count the number instances either 'B 'W pieces. used in order to help blocking.
+Parameters:
+            examinedlist, a list of a segmented part of the board.
+            totalcounted, an integer keeping count of total pieces are in examinedlist.
+            tracknumber, an integer indicating the total length of the examinedlist
+Return Value: totalcounted, an integer who counted the number of pieces in the list.
+Algorithm: 
+    1) if tracknumber reaches 0, return the total count.
+    2) If the element of examinedlist is an occupied space increment totalcounted and decrement tracknumber, then recursively call totalspaces with the updated parameters.
+    3) If the first element is not occupied space, decrement tracknumber and recursively call totalspaces.
+    4) This recursive process continues until tracknumber reaches 0.
+Reference: None.
+********************************************************************* |#
+
+(defun totalspaces (examinedlist totalcounted tracknumber)
+  (cond
+    ((= tracknumber 0) totalcounted)  ;; Correctly return totalcounted
+    ((or (eq (first examinedlist) 'B) (eq (first examinedlist) 'W))
+     ;; Increment totalcounted if 'B or 'W, decrement tracknumber by 1
+     (totalspaces (rest examinedlist) (+ totalcounted 1) (- tracknumber 1)))
+    (t
+     ;; Continue recursion without incrementing totalcounted if not 'B or 'W
+     (totalspaces (rest examinedlist) totalcounted (- tracknumber 1)))
+  )
+)
+
+#| *********************************************************************
+Function Name: check-for-block
+Purpose: Determine if current piece can do a move.  
+Parameters:
+            examinedlist, a list of symbols representing a segmented direction of the board.
+            currentpiece, the piece being moved.
+            currentcolor, color of the player ('B' or 'W') used to identify opponent pieces and determine move legality.
+            totalspaces, an integer representing the total number of spaces.
+            updateposition, an integer that could be used to track the current position within the examined list during recursion, though its specific usage may vary.
+Return Value: A symbol 'valid' if move is legal, or 'invalid' if an illegal move is detected.
+Algorithm: 
+    1) Return 'valid' if only one space remains to check (total spaces = 1) and the following space is either empty or not occupied by an opponent piece.
+    2) If the next space is empty ('x') or occupied by a piece of the currentcolor, recurse with the remaining path, decrementing totalspaces.
+    3) If the next space contains an opponent piece or otherwise obstructs the move, return 'invalid'.
+Reference: None.
+********************************************************************* |#
+
+(defun check-for-block (examinedlist currentpiece currentcolor totalspaces updateposition)
+  (let ((comparedpiece (first examinedlist)))
+    (cond
+      ((and (= totalspaces 1) (or (eq comparedpiece 'x) (not (eq comparedpiece currentcolor))))
+       'valid)
+      ;; If comparedpiece is 'x or equal to currentcolor, recurse with the rest of the list
+      ((or (eq comparedpiece 'x) (eq comparedpiece currentcolor))
+       (check-for-block (rest examinedlist) currentpiece currentcolor (- totalspaces 1) updateposition))
+      ;; Default case
+      (t 'invalid)
+    )
+  )
+)
+
+#| *********************************************************************
+Function Name: user-input
+Purpose: Prompt user for input representing a board position in standard notation and validate it.
+Parameters:
+            board, a nested list representing the board, used for context in subsequent validation.
+            playercolor, a symbol indicating the current player's color, used for validation.
+Return Value: Return a standard notation input.
+Algorithm: 
+    1) Call clear-output to clear the stream, preventing potential output from interfering with input reading.
+    2) Get user's input with read-line and pass to the inputValidation function with the board and playercolor for further processing.
+Reference: https://stackoverflow.com/questions/2078490/lisp-format-and-force-output 
+********************************************************************* |#
+
+;;https://stackoverflow.com/questions/2078490/lisp-format-and-force-output clearing stream for output
+(defun user-input(board playercolor)
+  (print "Enter in proper input ex. A1-H8: ") 
+  (terpri)
+  (clear-output)
+  (inputValidation (read-line) board playercolor)
+)
+
+#| *********************************************************************
+Function Name: inputValidation
+Purpose: To validate the user's input against several criteria to ensure it represents a valid board position. 
+Parameters:
+            input, a string representing the input.
+            board, a nested list representing the board, used for context in validation.
+            playercolor, a symbol indicating the current player's color, used for validation.
+Return Value: Original input
+Algorithm: 
+    1) Check if the input length.
+    2) Initialize the letter and number from the input.
+    3) Validate the letter part with `check-letter`.
+    4) Validate the number part with `check-number`.
+    5) Use `check-selection` to ensure the input corresponds to color.
+    6) If all checks pass, return the input as a valid entry. If any check fails, inform the user of the invalid input and prompt for re-entry.
+Reference: None.
+********************************************************************* |#
+
+(defun inputValidation (input board playercolor)
+  (cond ( (= (length input) 2)
+          (let((letter (char input 0)) (number (subseq input 1)) )
+            (let ((validateNumber (check-number number))
+                  (validateLetter (check-letter letter))
+                  (compareSelection (check-selection input board)))          
+                  (cond ((and (eq validateLetter 'valid-letter) (eq validateNumber 'valid-number) (eq playercolor compareSelection))
+                      input)
+                      (t (format t "Invalid input. Please try again.~%") (user-input board playercolor))
+                  )
+            )    
+          )
+          )
+          (t (print "Enter two characters only")  (user-input board playercolor))
+  )
+)
+
+#| *********************************************************************
+Function Name: check-number
+Purpose: Validate the given string represents a number within the range of 1 to 8.
+Parameters:
+            number-str, a string that represents a numeric value.
+Return Value: A symbol 'valid-number
+Algorithm: 
+    1) Attempt to parse the string as an integer, for non-numeric junk in the string.
+    2) Check if the parsed number exists (1 - 8).
+    3) Return 'valid-number' if both conditions are met, or 'invalid-number' otherwise.
+Reference: None.
+********************************************************************* |#
+
+(defun check-number (number-str)
+  (let ((number (parse-integer number-str :junk-allowed t)))
+    (cond ((and number (>= number 1) (<= number 8))
+           'valid-number)
+          (t 'invalid-number))
+          )
+)
+
+#| *********************************************************************
+Function Name: check-letter
+Purpose: Validate that a given character corresponds between 'A' and 'H'.
+Parameters:
+            letter, a character representing the input for a column on the chessboard
+Return Value: A symbol 'valid-letter.
+Algorithm: 
+    1) Convert uppercase form to standardize comparison.
+    2) Obtain the character code of the converted letter.
+    3) Check if the character code is within the range of 'A' and 'H'.
+    4) Return 'valid-letter' if the character code is within the valid range.
+Reference: None.
+********************************************************************* |#
+
+(defun check-letter (letter)
+  (let ((char-code (char-code (char-upcase letter))))
+    (cond ((and (>= char-code (char-code #\A)) (<= char-code (char-code #\H)))
+           'valid-letter)
+          (t 'invalid-letter)))
+)
+
+#| *********************************************************************
+Function Name: check-selection
+Purpose: Validate that a given input is players own piece.
+Parameters:
+            userinput, a string representing in standard LOC notation.
+            board, a nested list representing the current board.
+Return Value: Returns the piece of that cell.
+Algorithm: 
+    1) Converts input into understandable information
+    2) gets piece of the cell
+    3) Returns piece value.
+Reference: None.
+********************************************************************* |#
+
+(defun check-selection (userinput board)
+
+  (let ((convertedPos (convert-input userinput)))
+
+        (getpiece (first convertedPos) (getrow (first (rest convertedPos)) board))
+  )
+
+)
+
+#| *********************************************************************
+Function Name: validate-move
+Purpose: Validate if the currentpiece can move to user-specific input.
+Parameters:
+            validmoves, a list of strings of possible locations the piece could move.
+            input, a string representing the user's chosen move.
+            amountofmoves, a integer that is the size of length moves.
+            staticamount, an integer representing the original size of the validmoves list.
+            staticmoves, a list identical to validmoves that remains unchanged across recursive calls.
+Return Value: The validated move as a string if the user's input matches one of the valid moves; otherwise, it prompts the user to enter a proper move and retries validation.
+Algorithm: 
+    1) If amountofmoves reaches 0, indicating no match was found in the validmoves.
+    2) Examine and compare the user's input with the list's first valid move. If a match is discovered, return the corresponding move.
+    3) Call validate-move recursively with the remaining validmoves list if no match is found, decreasing the number of moves by 1 until a match is found or the list is exhausted.
+    4) Utilize clear-output to ensure clean user prompts to capture the user's re-entry when necessary.
+Reference: None.
+********************************************************************* |#
+
+(defun validate-move (validmoves input amountofmoves staticamount staticmoves)
+  (cond
+    ((= amountofmoves 0)
+     (progn
+       (print "Enter a proper move: ")
+       (clear-output)
+       (validate-move staticmoves (read-line) staticamount staticamount staticmoves)))
+    ((string= input (first validmoves))
+     (first validmoves))
+    (t (validate-move (rest validmoves) input (- amountofmoves 1) staticamount staticmoves))
+  )
+)
+
+#| *********************************************************************
+Function Name: swap-player
+Purpose: Alternate between two players turn.
+Parameters:
+            playerlist, a list containing the current player and the next player.
+            gamestate, a nested list of the gameboard and win/score for both players.
+            nocoin, a variable or flag that may be used to indicate whether a coin toss.
+Return Value: None.
+Algorithm: 
+    1) Extract the current and next players from the playerlist.
+    2) Call `play-round` with a new playerlist is reversed. This action advances the game to the next player's turn.
+Reference: None.
+********************************************************************* |#
+
+(defun swap-player (playerlist gamestate nocoin)
+
+  ;;(print gamestate)
+
+    (let ((currentplayer (first playerlist)) (nextplayer (first (rest playerlist))))
+    (play-round (list nextplayer currentplayer) gamestate nocoin)
+
+    (print (list nextplayer currentplayer))
+    (print "IN SWAP")
+    )
+)
+
+#| *********************************************************************
+Function Name: play-round
+Purpose: To conduct a single round of the game.
+Parameters:
+            playerlist, a list of players indicating the current and next player.
+            gamestate, a representation of the current state of the game.
+            cointoss, a flag that might be used.
+Return Value: None directly. The function's primary effects are the potential modification of the game state through actions like saving the game or moving pieces, and the progression of gameplay through player actions.
+Algorithm: 
+    1) Prompt player option to save current game state.
+    2) Advance the gameplay by printing the current game board and proceeding to player movement and other actions as defined by `moving-piece`.
+    3) moving-piece function is called to go into playing the game again.
+Reference: None.
+********************************************************************* |#
+
+(defun play-round (playerlist gamestate cointoss)
+(format t "Do you want to save the game? Yes (1) No(0):~%")
+  (let ((userinput (binary-input-validation)))
+    (cond ((= userinput 0)
+            ())
+          ((= userinput 1)
+          (savegame playerlist gamestate)
+          )
+
+    )
+  )
+
+  (terpri)
+  (printboard (first gamestate))
+  (moving-piece playerlist gamestate cointoss)
+)
+
+#| *********************************************************************
+Function Name: savegame
+Purpose: Save the current game state (board,score,wins) and nextplayer with color to a file.
+Parameters:
+            playerlist, a list with the information of currentplayer and nextplayer. 
+            gamestate, a representation board,score,wins.
+Return Value: None
+Algorithm: 
+    1) Create the file's complete path.
+    2) Generate a file stream at the path that was created and set criteria to overwrite any existing files and generate new ones if none already exist.
+    3) Serialize the game state and player list into a format suitable for saving (handled by `formatforsavegame`) and write this data to the file.
+    4) Inform the user of the successful save and the file's location.
+    5) Optionally, call `exit` to conclude the saving process or the application, depending on context and environment specifics.
+Reference: None.
+********************************************************************* |#
+
+(defun savegame (playerlist gamestate)
+  ;; Initiates the process by calling prompt-for-valid-filename with an empty initial filename,
+  (let ((filename (prompt-for-valid-filename "")))
+    (let ((full-path (concatenate 'string "C:\\Users\\Sikanders\\Desktop\\LOCLisp\\" filename)))
+      (with-open-file (stream full-path :direction :output :if-exists :supersede :if-does-not-exist :create)
+        (prin1 (formatforsavegame gamestate playerlist) stream))
+      (format t "Game saved to: ~a~%" full-path)
+    )
+    (exit)
+  )
+)
+
+#| *********************************************************************
+Function Name: prompt-for-valid-filename
+Purpose: validate user enter proper file name.
+Parameters:
+            filename, a string of user entered file name.
+Return Value: A string of valid filename
+Algorithm: 
+    1) If the provided filename is non-empty and does not already correspond to an existing file at the predetermined path.
+    2) Otherwise file is not vaild, prompt to enter new filename.
+    3) Recursively call `prompt-for-valid-filename` with the user's input to validate the new filename.
+Reference: None.
+********************************************************************* |#
+
+(defun prompt-for-valid-filename (filename)
+  ;; Base case: If a non-empty filename is provided and it doesn't exist, return it.
+  (cond ((and (not (equal filename ""))
+              (not (probe-file (concatenate 'string "C:\\Users\\Sikanders\\Desktop\\LOCLisp\\" filename))))
+         filename)
+        ;; Recursive case: Prompt for a filename. If it's the first attempt or the file exists, prompt again.
+        (t (format t "~%Enter a new filename to save the game: ")
+           (prompt-for-valid-filename (read-line))))
+)
+
+#| *********************************************************************
+Function Name: formatforsavegame
+Purpose: format of the saved file is setup to be serialized
+Parameters:
+            gamestate, a data structure representing the current state of the game.
+            playerlist, a list containing information about the players.
+Return Value: appended gamestate with next player.
+Algorithm: 
+    1) Get first player from the playerlist.
+    2) Get color of first player
+    3) Based on the player's itll append next player to the gamestate datastructure.
+Reference: None.
+********************************************************************* |#
+
+(defun formatforsavegame (gamestate playerlist)
+  (let ((player (first playerlist)))
+    (let ((nextplayer (first player))
+          (nextcolor (first (rest player))))
+      (cond 
+            ((eq nextcolor 'B)
+             
+              (append gamestate (list nextplayer) (list 'Black))
+
+             )
+            (t (append gamestate (list nextplayer) (list 'White)))
+      )
+    
+    )
+  )
+)
+
+#| *********************************************************************
+Function Name: replace-board
+Purpose: Updated board needs to replace gamestate board.
+Parameters:
+            game-state, a list representing the current state of the game.
+            new-board, nested list of new board.
+Return Value:  a new gamestate with the updated board.
+Reference: None.
+********************************************************************* |#
+
+(defun replace-board (game-state new-board)
+  (list new-board             ; New board replaces the old one
+        (second game-state)   ; Human wins
+        (third game-state)    ; Human score
+        (fourth game-state)   ; Computer wins
+        (fifth game-state))   ; Computer score
+) 
+
+#| *********************************************************************
+Function Name: updateboard
+Purpose: Update board after correct movement has been made.
+Parameters:
+            board, a nested list representing the current board.
+            currentpiece, a string representing the piece's current position of piece.
+            newposition, a string representing the new position of a piece.
+            currentcolor, a symbol ('B or 'W) represnting the color of the player.
+Return Value: nested list of the new board.
+Algorithm: 
+    1) Convert both the current and new positions to internal representation.
+    2) By comparing the row indices of the old and new locations, determine whether the move is inside the same row. Update the item in the same row if that is the case
+    3) If the move is to a different row, perform updates across two rows
+Reference: None.
+********************************************************************* |#
+
+(defun updateboard (board currentpiece newposition currentcolor)
+  (cond
+      ((= (first (rest (convert-input currentpiece))) (first (rest (convert-input newposition))) )
+      (progn
+        (let ((oldrow (getrow (first(rest (convert-input currentpiece))) board)))
+
+          (replace-row board (first(rest (convert-input currentpiece)))
+          (replace-element-at (first (convert-input newposition)) currentcolor (replace-element-at (first (convert-input currentpiece)) 'x oldrow)))
+           
+        )
+      
+      ))
+
+      (t 
+      
+        (let ((oldrow (getrow (first (rest (convert-input currentpiece))) board)))
+          
+            (let ((updatedboard (replace-row board (first (rest (convert-input currentpiece))) (replace-element-at (first (convert-input currentpiece)) 'x oldrow) ))
+          (newrow (getrow (first (rest (convert-input newposition))) board)))
+
+          (replace-row updatedboard (first (rest (convert-input newposition))) (replace-element-at (first (convert-input newposition)) currentcolor newrow ))
+          )
+        )
+      )
+   )
+)
+
+#| *********************************************************************
+Function Name: replace-row
+Purpose:  Helper function to updateboard. Replace old row with new movement.
+Parameters:
+            board, a nested list representing the game board.
+            row-index, an integer representing the position of that row that needs to be replaced from in the board.
+            new-row, a list of the new row to replace.
+Return Value: None.
+Algorithm: 
+    1) Call `replace-row-helper` with game, targeted row index for replacement, the new row, and an initial counter value.
+Reference: None.
+********************************************************************* |#
+
+(defun replace-row (board row-index new-row)
+  (replace-row-helper board row-index new-row 1)
+)
+
+#| *********************************************************************
+Function Name: replace-row-helper
+Purpose: To recursively navigate through the game board and replace a specific row with a new configuration. This helper function is critical for updating the board in response to game events, such as player moves or other actions that alter the board's state. It ensures that changes are applied accurately while preserving the integrity of the rest of the board.
+Parameters:
+            board, a nested list representing the board.
+            row-index, an integer representing the row the board needs modifying
+            new-row, a list representing the new row.
+            current-index, an integer used to track going through the entire board.
+Return Value: A updated board structure.
+Algorithm: 
+    1) Check if the board is empty NIL.
+    2) If current-index matches row-index, replace that row with the new-row.
+    3) If current-index does not match row-index, increment current-index by 1 until row is found.
+Reference: None.
+********************************************************************* |#
+
+(defun replace-row-helper (board row-index new-row current-index)
+  (cond
+    ((null board) nil)  ; If the board is empty, return nil.
+    ((= current-index row-index)
+     (cons new-row (cdr board)))  ; Replace the current row with new-row.
+    (t
+     (cons (car board) (replace-row-helper (cdr board) row-index new-row (+ 1 current-index))))
+  )
+)
+
+#| *********************************************************************
+Function Name: replace-element-at
+Purpose: To move piece with in a row.
+Parameters:
+            pos, an integer reprenting the position in where the piece will move.
+            new-element, the new piece thats going to take that cell. ('B or 'W)
+            lst, the list that reprents the row being modified.
+Return Value: a new list with the row being updated.
+Algorithm: 
+    1) Initialize the index to track the current position in the list during iteration.
+    2) Iterate over each element of the input list, using a lambda function for each element.
+    3) Check if the current index matches pos. If so, return the new element.
+    4) Increment the index with each iteration to keep track of the current position within the list.
+    5) Return a new list.
+Reference: None.
+********************************************************************* |#
+
+(defun replace-element-at (pos new-element lst)
+  (let ((index 1))  ; Initialize index to track the current position in the list.
+    (mapcar (lambda (item)
+              (let ((result (cond ((= index pos) new-element)  ; Check if the current index equals the position.
+                                  (t item))))  ; 't' acts as an 'else', returning the item unchanged.
+                (incf index)  ; Increment index for each item processed.
+                result))
+            lst))
+) 
+
+#| *********************************************************************
+Function Name: printboard
+Purpose: Print the board in a format for the user to understand.
+Parameters:
+            board, a nested list representing the game board.
+Return Value: None.
+Algorithm: 
+    1) Printing the board with its header,column, and rows.
+Reference: None.
+********************************************************************* |#
+
+(defun printboard(board)
+
+(print-top-border)
+(print-rows board 8)
+(print-bottom-border)
+(print-column-headers)
+
+)
+
+#| *********************************************************************
+Function Name: print-top-border
+Purpose: Helper function to printboard.
+Parameters: None.
+Return Value: None.
+Algorithm: 
+    1) Print header of the board for printboard.
+Reference: None.
+********************************************************************* |#
+
+(defun print-top-border ()
+  (format t "  +-----------------+~%")
+)
+
+#| *********************************************************************
+Function Name: print-rows
+Purpose: Helper fuction to printboard.
+Parameters:
+            board, a nested list of the board.
+            current-row, an integer indicating and keeping track of the rows.
+Return Value: None. 
+Algorithm: 
+    1) If the board is null, conclude the recursion as all rows have been printed.
+    2) Print current row with `print-row`.
+    3) Call `print-rows` with the remainder of the board and decrease the current row number by one.
+    4) Continue until the board list is exhausted.
+Reference: None.
+********************************************************************* |#
+
+(defun print-rows (board current-row)
+  "Recursively prints each row of the board."
+  (unless (null board) ; Stop recursion when there are no more rows
+    (print-row (first board) current-row) ; Print the current row
+    (print-rows (rest board) (1- current-row)))
+) ; Recursive call for the next row, decrementing the row number
+
+#| *********************************************************************
+Function Name: print-row
+Purpose: Helper function to print-rows. Prints out the current row being passed through.
+Parameters:
+            row, a list representing contents of the row to be printed.
+            current-row, is the current row being displayed along the side of the board.
+Return Value: None.
+Algorithm: 
+    1) Print the current row number with "|," establishing the row's visual starting point.
+    2) Iterate each cell in the row, printing its contents separated by spaces to the board positions.
+Reference: None.
+********************************************************************* |#
+
+(defun print-row (row current-row)
+  "Prints the row contents followed by a newline."
+  (format t "~D | " current-row) ; Print the current row number
+  (mapc (lambda (cell) (format t "~A " cell)) row)
+  (format t "|~%")
+) ; End of row
+
+#| *********************************************************************
+Function Name: print-bottom-border
+Purpose: Helper function to printboard.
+Parameters: None.
+Return Value: None.
+Algorithm: 
+    1) Print bottom boarder of the board.
+Reference: None.
+********************************************************************* |#
+
+(defun print-bottom-border ()
+  (format t "  +-----------------+~%")
+)
+
+#| *********************************************************************
+Function Name: print-column-headers
+Purpose: Helper function to printboard.
+Parameters: None.
+Return Value: None.
+Algorithm: 
+    1) Print the column letters.
+Reference: None.
+********************************************************************* |#
+
+(defun print-column-headers ()
+  (format t "    A B C D E F G H~%")
+)
+
+#| *********************************************************************
+Function Name: Serialization
+Purpose: Initiate the previous game state.
+Parameters: None.
+Algorithm: 
+    1) Call `validate-and-open-file` prompting the user to enter an appropriate file.
+    2) User helper functions to parse the information from the serialized file.
+       a) `serialized-gamestate-helper` reconstructs the game state.
+       b) `serialized-playerlist-helper` reconstructs the player list.
+    4) Print board
+    5) Continue to play the game.
+Reference: None.
+********************************************************************* |#
+
+(defun Serialization()
+  (format T "SERIALIZATION START GAME~%")
+
+  (let ((serializedinformation (validate-and-open-file)))
+
+    (let ((newgamestate (serialized-gamestate-helper serializedinformation))
+          (newplayerlist (serialized-playerlist-helper serializedinformation)))
+
+      (printboard (first newgamestate))
+      (moving-piece newplayerlist newgamestate 'nocoin)
+
+    )
+  )
+)
+
+#| *********************************************************************
+Function Name: validate-and-open-file
+Purpose: Validate a proper file was accessed.
+Parameters: None.
+Return Value: structure of game state.
+Algorithm: 
+      1) Ask for user to enter in filename
+      2) Call prompt-for-valid-file.
+Reference: None.
+********************************************************************* |#
+
+(defun validate-and-open-file ()
+  (format t "Please enter a filename: ")
+  (prompt-for-valid-file)
+)
+
+#| *********************************************************************
+Function Name: prompt-for-valid-file
+Purpose: Helper function to validate-and-open-file. Trying to find a valid file recurrively.
+Parameters: None.
+Return Value: A valid file was found.
+Algorithm: 
+    1) Look for file in my directory
+    2) Prompt user to enter filename.
+    3) Construct full path to the file by combining my directory path with user inputed filename.
+    4) To get a list of valid filenames, list every file in the target directory and filter.
+    5) Verify if any filenames in the list of acceptable filenames match the one supplied by the user.
+    6) If a match is found, open the file, read its contents, close the file, and return the contents.
+    7) If no match is found, inform the user and recursively prompt for a new filename.
+Reference: http://clhs.lisp.se/Body/m_w_open.htm
+********************************************************************* |#
+
+(defun prompt-for-valid-file ()
+  (let* ((directory "C:\\Users\\Sikanders\\Desktop\\LOCLisp")
+         (file-name (read-line))
+         (full-path (concatenate 'string directory "\\" file-name))
+         (files (directory (concatenate 'string directory "\\*.*")))
+         (valid-files (mapcar #'file-namestring files))
+         (is-valid (member file-name valid-files :test #'string-equal)))
+    (cond (is-valid
+           (with-open-file (stream full-path :direction :input)
+             (let ((content (read stream nil nil)))
+               (close stream)
+               content)))
+          (t
+           (format t "Invalid filename. Please try again: ")
+           (prompt-for-valid-file))))
+)
+
+#| *********************************************************************
+Function Name: serialized-gamestate-helper
+Purpose: Helper function to serialization. Used to get the gamestate from the valid file found.
+Parameters:
+            serializedinformation, a structure containing the serialized game state.
+Return Value: a list of the gamestate, which is the board, scores, and wins.
+Algorithm: 
+    1) Get the first five elements of serailzedinformation and return it.
+Reference: None.
+********************************************************************* |#
+
+(defun serialized-gamestate-helper (serializedinformation)
+  (list (first serializedinformation) (second serializedinformation)
+   (third serializedinformation) (fourth serializedinformation)
+   (fifth serializedinformation))
+)
+
+#| *********************************************************************
+Function Name: serialized-playerlist-helper
+Purpose: helper function to serialziation. Function is used to return the player list.
+Parameters:
+            serializedinformation, a structure containing the serialized game state.
+Return Value: A list of the playerlist.
+Algorithm: 
+    1) the sixth and seventh element of the serialzied file contain the next player and their color.
+    2) Based on the serialized information the player would either be Computer or Human.
+    3) Compare to see which player will be next from nextplayer
+    4) Compare which nextcolor to assign the currentplayer with the proper color
+    5) Return a list of both players with the nextplayer being first in the playerlist.
+
+Reference: None.
+********************************************************************* |#
+
+(defun serialized-playerlist-helper (serializedinformation)
+  (let ((nextplayer (sixth serializedinformation))
+        (nextcolor (seventh serializedinformation)))
+    (cond 
+     ;; Checking if nextplayer is 'computer
+     ((eq nextplayer 'computer)
+      (cond ((eq nextcolor 'white)
+             ;; Return value for 'computer' and 'white'
+             (list (list 'Computer 'W) (list 'Computer 'B)))
+            ((eq nextcolor 'black)
+             ;; Return value for 'computer' and 'black'
+             (list (list 'Computer 'B) (list 'Computer 'W)))))
+     
+     ;; Checking if nextplayer is 'human'
+     ((eq nextplayer 'human)
+      (cond ((eq nextcolor 'white)
+             ;; Return value for 'human' and 'white'
+             (list (list 'Human 'W) (list 'Computer 'B)))
+            ((eq nextcolor 'black)
+             ;; Return value for 'human' and 'black'
+             (list (list 'Human 'B) (list 'Computer 'W)))))
+     )
+    )
+)
+
+#| *********************************************************************
+Function Name: wincondition
+Purpose: To determine if a winner has been found.
+Parameters:
+            board, a nested list representing the current game board.
+            color, a symbol representing the color of the player.
+Return Value: Boolean value of if the player has won or not.
+Algorithm: 
+    1) Calls replace-color which floods the board of only T'S and F's, T's being the color passed through everything else being F's.
+    3) Get first piece found of current color being examined.
+    4) Calculate total number colored pieces found on the board.
+    6) Call allpieces connected to see if board is connected or not.
+Reference: None.
+********************************************************************* |#
+
+(defun wincondition (board color)
+
+  (let ((floodedboard (replace-color board color)))
+    (let ((allpieces (find-all-positions floodedboard 'T 1 ())))
+      (let ((firstpiece (convert-input (first allpieces)))
+            (totalpieces (length allpieces))
+            (nieghborpieces (neighboring-pieces floodedboard (first allpieces))))
+
+        (print (first allpieces))
+        (allpiecesconnected floodedboard firstpiece totalpieces nieghborpieces (length nieghborpieces) () ())
+      
+      
+      )
+    )
+  )
+)
+
+#| *********************************************************************
+Function Name: replace-color
+Purpose: Helper function to win condition. Floods the board where only a certain instance of the piece exists.
+Parameters:
+            board, a nested list representing the game board.
+            color, the current color of the player.
+Return Value: Flooded board represented with T's and F's only.
+Algorithm: 
+    1) Iterate over each row of the board, applying a transformation to each row.
+    2) Iterate through each cell in each row, giving it a different look depending on its color.
+    3) Verify that the color of each cell is the same as the designated color. Return "T" if that is the case.
+Reference: None.
+********************************************************************* |#
+
+(defun replace-color (board color)
+  (mapcar (lambda (row)
+            (mapcar (lambda (cell)
+                      (cond ((eq cell color) 'T)
+                            (t 'F)))
+                    row))
+          board)
+)
+
+#| *********************************************************************
+Function Name: allpiecesconnected
+Purpose: Helper function to win condition to see wether or not the board is connected.
+Parameters:
+            floodedboard, a nested list representing a board where pieces are marked as 'T' and as 'F'.
+            currentpiece, a string denoting starting piece for connectivity.
+            totalpieces, an integer representing the total number of pieces.
+            neighboringpieces, a list of positions representing all neighboringpieces.
+            increment, an integer to iterate through all neighrboringpieces.
+            visitedpieces, a list of positions of all previous visited pieces.
+            nextpieces, a list of positions representing what to check next for connectivity.
+Return Value: Boolean value of all pieces connected or not.
+Algorithm:
+
+    Not completed
+
+    1) Check if piece is from the same color, and if visited. If the piece has not been visited and is the same color add to nextpiece.
+      a.) Check if where on the last neighor: ERROR HAPPENING
+      b.) comparing piece to nextpieces and continue to search for other pieces.
+    2) If the piece isnt the same color or has been visited recurrively call allpiecesconnected lowering increment and examing the next neighbor
+      a.) On last piece to compare : ERROR HAPPENING
+      b.) Nieghbor not found, recurively call to check for other neighboringpieces.
+
+Reference: None.
+********************************************************************* |#
+
+(defun allpiecesconnected (floodedboard currentpiece totalpieces neighboringpieces increment visitedpieces nextpieces)
+
+  (let 
+  ;; Current piece being checked for if connected.
+    ((comparingpiece (convert-input (first neighboringpieces))))
+
+    (cond 
+          ((= increment 0) ;;Went through all pieces and want to check the nextpieces if the have neighbors.
+          (progn
+          (print "went through all pieces")
+            (allpiecesconnected floodedboard (first nextpieces) totalpieces 
+            (neighboring-pieces floodedboard (first nextpieces))
+            (length (neighboring-pieces floodedboard (first nextpieces)))
+            (append visitedpieces (list (first neighboringpieces)))
+            (rest nextpieces)
+          )))
+          ((and (eq (similarpiece floodedboard comparingpiece) 'similarpiece) (eq (checkifvisited (first neighboringpieces) visitedpieces (length visitedpieces)) 'notvisited))
+           (progn
+
+              (print (first neighboringpieces))
+
+              (cond 
+                    ((= increment 1)
+                    (progn  ;;Piece found however we have no more pieces to check for.
+                      (format t "new piece =1~A~%"  (reverse-convert comparingpiece))
+                      (allpiecesconnected floodedboard currentpiece totalpieces (neighboring-pieces floodedboard "A1") 
+                      (- increment 1) visitedpieces (append nextpieces (list (first neighboringpieces))))))
+
+                    ((> increment 1)
+                    (progn  ;;Piece found we have more pieces to check for
+                      (print "new piece >1")
+                      (allpiecesconnected floodedboard currentpiece totalpieces (rest neighboringpieces) (- increment 1) visitedpieces (append nextpieces (list (first neighboringpieces))))))
+                    
+              )
+           
+           ))
+          (T 
+              (cond 
+                    ((= increment 1)
+                     (progn
+                     (print "no pieces found 1") ;; No pieces were found however we have no more pieces to check
+                      (allpiecesconnected floodedboard currentpiece totalpieces (neighboring-pieces floodedboard "A8") (- increment) visitedpieces nextpieces)))
+                     ((> increment 1)
+                     (progn
+                     (print "no pieces found >1") ;; No pieces were found however we're still have more pieces to check
+                      (allpiecesconnected floodedboard currentpiece totalpieces (rest neighboringpieces) (- increment 1) visitedpieces nextpieces)))
+
+              )
+        
+          )
+    
+    )
+  )
+)
+
+#| *********************************************************************
+Function Name: similarpiece
+Purpose: Helper function to allpiecesconnected. Sees if the current piece is of similar color or not.
+Parameters:
+            board, a nested list representing the floodedboard.
+            piece, a list containing the location of the piece being examed.
+Return Value: 'similarpiece, meaning the color was of same piece, or NIL meaning it wasnt of the same color.
+Algorithm: 
+    1) Get content of the cell from the board and piece.
+    2) Check if the cell is the same color as the piece.
+    3) Return similarpiece or NIL.
+Reference: None.
+********************************************************************* |#
+
+(defun similarpiece (board piece)
+
+  (cond ((eq 'T (getpiece (first piece) (getrow (first (rest piece)) board))) 'similarpiece)
+  )
+
+)
+
+#| *********************************************************************
+Function Name: checkifvisited
+Purpose: Helper function to allpiecesconnected, checks if the piece has been visited.
+Parameters:
+            exampiece, a string of the currentpiece being checked.
+            listofvisits, a list of previous pieces that have been visited
+            increment, an integer used to iterate through listofvisits.
+Return Value: 'visited' if exampiece is found within the listofvisits. 'notvisited', indicating that the piece has not been processed.
+Algorithm: 
+    1) If increment has reached 0, return 'notvisited'. Indicating that the entire list has been checked a similar piece.
+    2) Compare exampiece with the first element in listofvisits
+    3) If there is no match, recursively call `checkifvisited,` continuing the search through the list.
+Reference: None.
+********************************************************************* |#
+
+(defun checkifvisited(exampiece listofvisits increment)
+
+  (cond ((= increment 0)
+         'notvisited)
+         ((string= exampiece (first listofvisits))
+          'visited)
+        (t (checkifvisited exampiece (rest listofvisits) (- increment 1)))
+
+  )
+
+)
+
+#| *********************************************************************
+Function Name: neighboring-pieces
+Purpose: Helper function to wincondition and allpiecesconnected. Finds all possible neighboringpieces.
+Parameters:
+            board, the game board represented as a nested list.
+            currentpiece, a string representing the current position of a piece.
+Return Value: list of strings of neighboringpieces to the currentpiece.
+Algorithm: 
+    1) Convert the currentpiece position.
+    2) Based on the piece's position, construct a list of potential neighboring positions. This involves:
+       a) Finding locations that are next to the provided piece, including diagonal and orthogonal neighbors.
+       b) Eliminating posts that would be outside the purview of the board.
+    3) Convert the neighboring positions back into standard notation.
+    4) Return the list of neighboring positions in standard notation.
+Reference: None.
+********************************************************************* |#
+
+(defun neighboring-pieces (board currentpiece)
+
+  (let ((column (first (convert-input currentpiece)))
+        (row (first (rest (convert-input currentpiece)))))
+
+        (cond ((and (= column 1) (= row 1)) ;;A8 Top left
+               (list 
+                  (reverse-convert (+ (* (+ column 1) 10) (+ row 1)))
+                  (reverse-convert (+ (* column 10) (+ row 1)))
+                  (reverse-convert (+ (* (+ column 1) 10) row))
+               ))
+               ((and (= column 8) (= row 1)) ;;H8 Top right
+               (list 
+                  (reverse-convert (+ (* (- column 1) 10) (+ row 1)))
+                  (reverse-convert (+ (* column 10) (+ row 1)))
+                  (reverse-convert (+ (* (- column 1) 10) row))
+               ))
+              ((and (= column 1) (= row 8)) ;;A1 Bottom left
+               (list 
+                  (reverse-convert (+ (* (+ column 1) 10) (- row 1)))
+                  (reverse-convert (+ (* column 10) (- row 1)))
+                  (reverse-convert (+ (* (+ column 1) 10) row))
+               ))
+              ((and (= column 8) (= row 8)) ;;H1 bottom right
+               (list 
+                  (reverse-convert (+ (* (- column 1) 10) (- row 1)))
+                  (reverse-convert (+ (* column 10) (- row 1)))
+                  (reverse-convert (+ (* (- column 1) 10) row))
+               ))
+              ((and (= column 1) (> row 1)) ;;A# along the left side
+               (list 
+                  (reverse-convert (+ (* (+ column 1) 10) (+ row 1)))
+                  (reverse-convert (+ (* (+ column 1) 10) row))
+                  (reverse-convert (+ (* (+ column 1) 10) (- row 1)))              
+                  (reverse-convert (+ (* column 10) (- row 1)))
+                  (reverse-convert (+ (* column 10) (+ row 1)))
+               ))
+              ((and (= column 8) (> row 1)) ;;H# along the right side
+               (list 
+                  (reverse-convert (+ (* (- column 1) 10) (+ row 1)))
+                  (reverse-convert (+ (* (- column 1) 10) row))
+                  (reverse-convert (+ (* (- column 1) 10) (- row 1)))              
+                  (reverse-convert (+ (* column 10) (- row 1)))
+                  (reverse-convert (+ (* column 10) (+ row 1)))
+               ))
+              ((and (> column 1) (= row 1)) ;;A8 Along the top
+               (list 
+                  (reverse-convert (+ (* (- column 1) 10) row))
+                  (reverse-convert (+ (* (- column 1) 10) (+ row 1)))
+                  (reverse-convert (+ (* column 10) (+ row 1)))
+                  (reverse-convert (+ (* (+ column 1) 10) (+ row 1)))
+                  (reverse-convert (+ (* (+ column 1) 10) row))
+               ))
+              ((and (> column 1) (= row 8)) ;;#1 Along the bottom
+               (list 
+                  (reverse-convert (+ (* (+ column 1) 10) row))
+                  (reverse-convert (+ (* (+ column 1) 10) (- row 1)))
+                  (reverse-convert (+ (* column 10) (- row 1)))
+                  (reverse-convert (+ (* (- column 1) 10) (- row 1)))
+                  (reverse-convert (+ (* (- column 1) 10) row))
+               ))
+               (t      ;;All other cases since the piece is not to the edge of the board
+                  (list 
+                    (reverse-convert (+ (* (- column 1) 10) (- row 1) ) )
+                    (reverse-convert (+ (* column 10) (- row 1) ) )
+                    (reverse-convert (+ (* (+ column 1) 10) (- row 1) ) )
+                    
+                    (reverse-convert (+ (* (- column 1) 10) row ) )
+                    (reverse-convert (+ (* (+ column 1) 10) row) )
+
+                    (reverse-convert (+ (* (- column 1) 10) (+ row 1) ) )
+                    (reverse-convert (+ (* column 10) (+ row 1) ) )
+                    (reverse-convert (+ (* (+ column 1) 10) (+ row 1) ) )                   
+
+                  )
+               )
+        )
+
+  )
+)
+
