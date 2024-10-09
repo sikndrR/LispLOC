@@ -78,4 +78,10 @@
 - **Time Spent**: 2 hours.
 
 ## Screenshots
-_(Add screenshots here)_
+![image](https://github.com/user-attachments/assets/6efe6fff-81e3-4811-b3ac-af8115afffee)
+![image](https://github.com/user-attachments/assets/c5880245-2c1b-408f-b506-6ede8413c3dc)
+![image](https://github.com/user-attachments/assets/ba26e99d-43e4-4945-a34a-8401e72b9316)
+![image](https://github.com/user-attachments/assets/f24554d1-41a5-49d1-a852-d07d09a7219b)
+
+
+
